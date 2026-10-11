@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PyAdvance - Advanced Python Online Compiler</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Fira Code & Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Brython for in-browser Python Execution -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/brython/3.11.1/brython.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/brython/3.11.1/brython_stdlib.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['Fira Code', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .code-font { font-family: 'Fira Code', monospace; }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+    </style>
+</head>
+<body class="h-full bg-slate-950 text-slate-100 flex flex-col overflow-hidden" onload="brython({debug:1})">
+
+    <!-- Header Navigation -->
+    <header class="bg-slate-900 border-b border-slate-800 px-4 py-3 flex items-center justify-between shrink-0">
+        <div class="flex items-center space-x-3">
+            <div class="bg-gradient-to-tr from-blue-600 to-indigo-500 p-2 rounded-xl text-white shadow-lg shadow-blue-500/20">
+                <i class="fa-solid fa-terminal text-lg"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-lg tracking-tight flex items-center gap-2">
+                    PyAdvance <span class="text-xs bg-blue-500/20 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded-full font-medium">v2.5 Studio</span>
+                </h1>
+                <p class="text-xs text-slate-400">Professional In-Browser Python IDE & Compiler</p>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-2 sm:space-x-3">
+            <!-- Snippets Dropdown -->
+            <div class="relative">
+                <select id="snippetSelector" onchange="loadSnippet(this.value)" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs sm:text-sm px-3 py-2 rounded-lg border border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition cursor-pointer">
+                    <option value="" disabled selected>Load Snippet...</option>
+                    <option value="hello">Hello World & Variables</option>
+                    <option value="fibonacci">Fibonacci Sequence</option>
+                    <option value="prime">Prime Number Checker</option>
+                    <option value="matrix">Matrix Operations</option>
+                    <option value="oop">Object-Oriented Programming</option>
+                </select>
+            </div>
+
+            <!-- Theme Toggle -->
+            <button onclick="toggleTheme()" class="bg-slate-800 hover:bg-slate-700 p-2 rounded-lg border border-slate-700 text-slate-300 hover:text-white transition title='Toggle Theme'">
+                <i id="themeIcon" class="fa-solid fa-moon text-sm"></i>
+            </button>
+
+            <!-- Settings Modal Trigger -->
+            <button onclick="openSettings()" class="bg-slate-800 hover:bg-slate-700 p-2 rounded-lg border border-slate-700 text-slate-300 hover:text-white transition" title="Editor Settings">
+                <i class="fa-solid fa-gear text-sm"></i>
+            </button>
+
+            <!-- Run Button -->
+            <button id="runBtn" onclick="executePythonCode()" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-2 shadow-lg shadow-emerald-900/30 transition transform active:scale-95">
+                <i class="fa-solid fa-play text-xs"></i> Run Code
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <div class="flex-1 flex flex-col lg:flex-row overflow-hidden">
+        
+        <!-- Left Panel: File Explorer & Sidebar -->
+        <div class="w-full lg:w-64 bg-slate-900/60 border-r border-slate-800 flex flex-col shrink-0">
+            <div class="p-3 border-b border-slate-800 flex items-center justify-between text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                <span>Project Files</span>
+                <button onclick="addNewFile()" class="text-blue-400 hover:text-blue-300 transition" title="New File"><i class="fa-solid fa-plus"></i></button>
+            </div>
+            <div id="fileList" class="flex-1 overflow-y-auto p-2 space-y-1">
+                <div onclick="switchFile('main.py')" id="file-main.py" class="flex items-center justify-between px-3 py-2 rounded-lg bg-blue-600/20 text-blue-300 border border-blue-500/30 text-sm cursor-pointer transition">
+                    <span class="flex items-center gap-2 font-medium"><i class="fa-brands fa-python text-blue-400"></i> main.py</span>
+                    <span class="text-xs bg-blue-500/30 px-1.5 py-0.5 rounded text-blue-200">Active</span>
+                </div>
+                <div onclick="switchFile('utils.py')" id="file-utils.py" class="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-slate-800/80 text-slate-400 hover:text-slate-200 text-sm cursor-pointer transition">
+                    <span class="flex items-center gap-2"><i class="fa-brands fa-python text-slate-500"></i> utils.py</span>
+                </div>
+                <div onclick="switchFile('data.py')" id="file-data.py" class="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-slate-800/80 text-slate-400 hover:text-slate-200 text-sm cursor-pointer transition">
+                    <span class="flex items-center gap-2"><i class="fa-brands fa-python text-slate-500"></i> data.py</span>
+                </div>
+            </div>
+
+            <!-- Quick Stats & Info -->
+            <div class="p-3 border-t border-slate-800 bg-slate-900/80 text-xs text-slate-400 space-y-1.5">
+                <div class="flex justify-between">
+                    <span>Python Engine:</span>
+                    <span class="text-emerald-400 font-medium">Brython 3.11</span>
+                </div>
+                <div class="flex justify-between">
+                    <span>Status:</span>
+                    <span id="engineStatus" class="text-emerald-400 font-medium flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Ready</span>
+                </div>
+                <div class="flex justify-between">
+                    <span>Lines / Chars:</span>
+                    <span id="statsInfo" class="text-slate-300">0 / 0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Center/Right Area: Code Editor & Console Output -->
+        <div class="flex-1 flex flex-col lg:flex-row overflow-hidden">
+            
+            <!-- Code Editor Container -->
+            <div class="flex-1 flex flex-col border-r border-slate-800 bg-slate-900 overflow-hidden">
+                <!-- Editor Toolbar -->
+                <div class="bg-slate-900 px-4 py-2 border-b border-slate-800 flex items-center justify-between text-xs text-slate-400">
+                    <div class="flex items-center gap-2">
+                        <span id="currentFileName" class="font-medium text-slate-200 flex items-center gap-1.5"><i class="fa-brands fa-python text-blue-400"></i> main.py</span>
+                        <span class="text-slate-600">|</span>
+                        <span>UTF-8</span>
+                        <span>Python 3</span>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <button onclick="formatCode()" class="hover:text-white transition flex items-center gap-1" title="Format Code"><i class="fa-solid fa-wand-magic-sparkles text-amber-400"></i> Format</button>
+                        <button onclick="copyCode()" class="hover:text-white transition flex items-center gap-1" title="Copy Code"><i class="fa-regular fa-copy"></i> Copy</button>
+                        <button onclick="downloadCode()" class="hover:text-white transition flex items-center gap-1" title="Download File"><i class="fa-solid fa-download"></i> Save</button>
+                        <button onclick="clearEditor()" class="hover:text-rose-400 transition flex items-center gap-1" title="Clear Editor"><i class="fa-regular fa-trash-can"></i> Clear</button>
+                    </div>
+                </div>
+
+                <!-- Code Input Area with Line Numbers Simulation -->
+                <div class="flex-1 flex relative overflow-hidden bg-[#0f172a]">
+                    <!-- Line Numbers -->
+                    <div id="lineNumbers" class="w-12 bg-slate-900/80 text-slate-600 code-font text-xs py-4 select-none text-right pr-3 overflow-hidden leading-relaxed border-r border-slate-800/60">
+                        1
+                    </div>
+                    <!-- Textarea Editor -->
+                    <textarea id="codeEditor" oninput="handleEditorInput()" onscroll="syncScroll()" onkeydown="handleKeydown(event)" placeholder="Write your Python code here..." class="flex-1 bg-transparent text-slate-200 code-font text-sm p-4 resize-none focus:outline-none leading-relaxed overflow-auto whitespace-pre tab-size-4"></textarea>
+                </div>
+            </div>
+
+            <!-- Console Output Panel -->
+            <div class="w-full lg:w-2/5 flex flex-col bg-slate-950 overflow-hidden">
+                <!-- Terminal Header -->
+                <div class="bg-slate-900 px-4 py-2 border-b border-slate-800 flex items-center justify-between text-xs">
+                    <div class="flex items-center space-x-2">
+                        <i class="fa-solid fa-terminal text-emerald-400"></i>
+                        <span class="font-semibold text-slate-300">Terminal & Output</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Interactive Python</span>
+                        <button onclick="clearConsole()" class="text-slate-400 hover:text-white transition text-xs px-2 py-1 bg-slate-800 rounded border border-slate-700" title="Clear Console"><i class="fa-solid fa-rotate-right mr-1"></i> Clear</button>
+                    </div>
+                </div>
+
+                <!-- Output Display Area -->
+                <div id="terminalOutput" class="flex-1 p-4 code-font text-xs overflow-y-auto space-y-2 text-slate-300 bg-slate-950">
+                    <div class="text-slate-500 italic"># Welcome to PyAdvance Online Compiler.</div>
+                    <div class="text-slate-500 italic"># Click "Run Code" above or press Ctrl+Enter to execute.</div>
+                    <div class="text-emerald-400/80">&gt;&gt;&gt; Ready.</div>
+                </div>
+
+                <!-- Interactive STDIN Input Bar -->
+                <div class="p-3 bg-slate-900 border-t border-slate-800 flex items-center gap-2">
+                    <span class="text-emerald-400 code-font text-xs font-bold">&gt;&gt;</span>
+                    <input type="text" id="stdinInput" onkeydown="handleStdin(event)" placeholder="Provide input() value here if prompted..." class="flex-1 bg-slate-950 text-slate-200 code-font text-xs px-3 py-2 rounded border border-slate-800 focus:outline-none focus:border-emerald-500 transition">
+                    <button onclick="sendStdin()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded text-xs font-medium transition">Send</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-5">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 class="font-bold text-base text-slate-200 flex items-center gap-2"><i class="fa-solid fa-gear text-blue-400"></i> Editor Settings</h3>
+                <button onclick="closeSettings()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="space-y-4 text-sm">
+                <div>
+                    <label class="block text-slate-400 mb-1">Font Size</label>
+                    <select id="settingFontSize" onchange="updateFontSize(this.value)" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-blue-500">
+                        <option value="12px">12px - Compact</option>
+                        <option value="14px" selected>14px - Standard</option>
+                        <option value="16px">16px - Large</option>
+                        <option value="18px">18px - Extra Large</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-slate-400 mb-1">Tab Size</label>
+                    <select id="settingTabSize" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-blue-500">
+                        <option value="2">2 Spaces</option>
+                        <option value="4" selected>4 Spaces</option>
+                        <option value="8">8 Spaces</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex justify-end pt-2">
+                <button onclick="closeSettings()" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-medium text-sm transition">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 border border-slate-700 text-slate-200 px-4 py-3 rounded-xl shadow-2xl z-50 transform translate-y-20 opacity-0 transition-all duration-300 flex items-center gap-3">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400"></i>
+        <span id="toastMsg" class="text-sm font-medium">Notification message</span>
+    </div>
+
+    <!-- Python Execution & Editor Management Scripts -->
+    <script type="text/python">
+        import sys
+        import traceback
+        from browser import document, window, html
+
+        # Custom stdout and stderr redirection for the terminal
+        class ConsoleOutput:
+            def write(self, data):
+                window.appendTerminalOutput(str(data), "output")
+            def flush(self):
+                pass
+
+        class ConsoleError:
+            def write(self, data):
+                window.appendTerminalOutput(str(data), "error")
+            def flush(self):
+                pass
+
+        sys.stdout = ConsoleOutput()
+        sys.stderr = ConsoleError()
+
+        # Global execution hook called from JS
+        def run_python_code(code_string):
+            window.clearTerminal()
+            window.appendTerminalOutput("Executing script...\n", "info")
+            try:
+                # Execute in global scope
+                global_ns = {"__name__": "__main__"}
+                exec(code_string, global_ns)
+                window.appendTerminalOutput("\n--- Program finished with exit code 0 ---", "success")
+            except Exception as e:
+                tb_str = traceback.format_exc()
+                window.appendTerminalOutput(tb_str, "error")
+
+        # Expose Python function to window object
+        window.brythonRun = run_python_code
+    </script>
+
+    <script>
+        // File storage state
+        const files = {
+            'main.py': `# Welcome to PyAdvance Compiler
+# Write your Python code below
+
+def greet(name):
+    return f"Hello, {name}! Welcome to advanced Python compilation."
+
+message = greet("Developer")
+print(message)
+
+# Let's compute factorial of 6
+def factorial(n):
+    if n == 0:
+        return 1
+    return n * factorial(n - 1)
+
+print(f"Factorial of 6 is: {factorial(6)}")
+`,
+            'utils.py': `# Utility functions module
+def add(a, b):
+    return a + b
+
+def multiply(a, b):
+    return a * b
+`,
+            'data.py': `# Sample dataset
+users = [
+    {"id": 1, "name": "Alice", "role": "Admin"},
+    {"id": 2, "name": "Bob", "role": "Developer"},
+    {"id": 3, "name": "Charlie", "role": "Designer"}
+]
+
+for user in users:
+    print(f"User {user['name']} is a {user['role']}")
+`
+        };
+
+        let activeFile = 'main.py';
+        let stdinQueue = [];
+
+        // Snippets library
+        const snippets = {
+            hello: `# Variables and Input simulation
+name = "Pythonista"
+age = 25
+print(f"Name: {name}, Age: {age}")
+
+# Conditional check
+if age >= 18:
+    print("Status: Adult / Eligible")
+else:
+    print("Status: Minor")
+`,
+            fibonacci: `# Fibonacci Sequence generator up to N terms
+n_terms = 10
+n1, n2 = 0, 1
+count = 0
+
+print(f"Fibonacci sequence up to {n_terms} terms:")
+while count < n_terms:
+    print(n1, end=" ")
+    nth = n1 + n2
+    n1 = n2
+    n2 = nth
+print()
+`,
+            prime: `# Prime Number Checker
+def is_prime(num):
+    if num <= 1:
+        return False
+    for i in range(2, int(num**0.5) + 1):
+        if num % i == 0:
+            return False
+    return True
+
+test_numbers = [11, 4, 17, 21, 2, 9]
+for n in test_numbers:
+    print(f"Number {n} is prime? {is_prime(n)}")
+`,
+            matrix: `# Matrix Transpose & Multiplication simulation
+matrix = [
+    [1, 2, 3],
+    [4, 5, 6]
+]
+
+print("Original Matrix:")
+for row in matrix:
+    print(row)
+
+# Transpose
+transpose = [[matrix[j][i] for j in range(len(matrix))] for i in range(len(matrix[0]))]
+print("\\nTransposed Matrix:")
+for row in transpose:
+    print(row)
+`,
+            oop: `# Object-Oriented Programming in Python
+class Vehicle:
+    def __init__(self, brand, model):
+        self.brand = brand
+        self.model = model
+
+    def get_info(self):
+        return f"{self.brand} {self.model}"
+
+class Car(Vehicle):
+    def __init__(self, brand, model, doors):
+        super().__init__(brand, model)
+        self.doors = doors
+
+    def get_info(self):
+        return f"{super().get_info()} with {self.doors} doors"
+
+my_car = Car("Tesla", "Model S", 4)
+print("Car Details:", my_car.get_info())
+`
+        };
+
+        window.onload = function() {
+            loadActiveFileToEditor();
+            updateLineNumbers();
+            updateStats();
+        };
+
+        function switchFile(filename) {
+            files[activeFile] = document.getElementById('codeEditor').value;
+            activeFile = filename;
+            
+            // Update UI file tabs
+            document.querySelectorAll('#fileList > div').forEach(el => {
+                el.className = "flex items-center justify-between px-3 py-2 rounded-lg hover:bg-slate-800/80 text-slate-400 hover:text-slate-200 text-sm cursor-pointer transition";
+                if(el.innerHTML.includes(filename)) {
+                    el.className = "flex items-center justify-between px-3 py-2 rounded-lg bg-blue-600/20 text-blue-300 border border-blue-500/30 text-sm cursor-pointer transition";
+                }
+            });
+
+            document.getElementById('currentFileName').innerHTML = `<i class="fa-brands fa-python text-blue-400"></i> ${filename}`;
+            loadActiveFileToEditor();
+            updateLineNumbers();
+            updateStats();
+        }
+
+        function loadActiveFileToEditor() {
+            document.getElementById('codeEditor').value = files[activeFile] || '';
+        }
+
+        function handleEditorInput() {
+            files[activeFile] = document.getElementById('codeEditor').value;
+            updateLineNumbers();
+            updateStats();
+        }
+
+        function updateLineNumbers() {
+            const editor = document.getElementById('codeEditor');
+            const lines = editor.value.split('\n').length;
+            let numbersHtml = '';
+            for (let i = 1; i <= lines; i++) {
+                numbersHtml += i + '<br>';
+            }
+            document.getElementById('lineNumbers').innerHTML = numbersHtml;
+        }
+
+        function updateStats() {
+            const content = document.getElementById('codeEditor').value;
+            const lines = content.split('\n').length;
+            const chars = content.length;
+            document.getElementById('statsInfo').innerText = `${lines} lines / ${chars} chars`;
+        }
+
+        function syncScroll() {
+            const editor = document.getElementById('codeEditor');
+            const lineNumbers = document.getElementById('lineNumbers');
+            lineNumbers.scrollTop = editor.scrollTop;
+        }
+
+        function handleKeydown(e) {
+            const editor = document.getElementById('codeEditor');
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                const start = editor.selectionStart;
+                const end = editor.selectionEnd;
+                editor.value = editor.value.substring(0, start) + "    " + editor.value.substring(end);
+                editor.selectionStart = editor.selectionEnd = start + 4;
+                handleEditorInput();
+            } else if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                executePythonCode();
+            }
+        }
+
+        function executePythonCode() {
+            const code = document.getElementById('codeEditor').value;
+            const runBtn = document.getElementById('runBtn');
+            runBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-xs"></i> Running...`;
+            runBtn.disabled = true;
+
+            try {
+                if (window.brythonRun) {
+                    window.brythonRun(code);
+                } else {
+                    appendTerminalOutput("Error: Brython engine not initialized yet.\n", "error");
+                }
+            } catch (err) {
+                appendTerminalOutput(err.toString() + "\n", "error");
+            } finally {
+                setTimeout(() => {
+                    runBtn.innerHTML = `<i class="fa-solid fa-play text-xs"></i> Run Code`;
+                    runBtn.disabled = false;
+                }, 300);
+            }
+        }
+
+        // Terminal Output Helpers
+        window.clearTerminal = function() {
+            document.getElementById('terminalOutput').innerHTML = '';
+        }
+
+        window.appendTerminalOutput = function(text, type = "output") {
+            const terminal = document.getElementById('terminalOutput');
+            const div = document.createElement('div');
+            
+            if (type === "error") {
+                div.className = "text-rose-400 whitespace-pre-wrap leading-relaxed";
+            } else if (type === "success") {
+                div.className = "text-emerald-400 font-semibold pt-1 border-t border-slate-900";
+            } else if (type === "info") {
+                div.className = "text-blue-400 italic";
+            } else {
+                div.className = "text-slate-200 whitespace-pre-wrap leading-relaxed";
+            }
+            
+            div.innerText = text;
+            terminal.appendChild(div);
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        function clearConsole() {
+            document.getElementById('terminalOutput').innerHTML = '<div class="text-emerald-400/80">&gt;&gt;&gt; Terminal cleared.</div>';
+        }
+
+        function loadSnippet(snippetKey) {
+            if (!snippets[snippetKey]) return;
+            document.getElementById('codeEditor').value = snippets[snippetKey];
+            files[activeFile] = snippets[snippetKey];
+            updateLineNumbers();
+            updateStats();
+            showToast(`Loaded snippet successfully!`, 'success');
+        }
+
+        function formatCode() {
+            showToast('Code formatting simulated successfully!', 'success');
+        }
+
+        function copyCode() {
+            const code = document.getElementById('codeEditor').value;
+            const textarea = document.createElement('textarea');
+            textarea.value = code;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            showToast('Code copied to clipboard!', 'success');
+        }
+
+        function downloadCode() {
+            const code = document.getElementById('codeEditor').value;
+            const blob = new Blob([code], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = activeFile;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast(`Downloaded ${activeFile} successfully!`, 'success');
+        }
+
+        function clearEditor() {
+            if(confirm("Are you sure you want to clear the editor?")) {
+                document.getElementById('codeEditor').value = '';
+                handleEditorInput();
+                showToast('Editor cleared.', 'info');
+            }
+        }
+
+        function addNewFile() {
+            const filename = prompt("Enter new Python filename (e.g. script.py):", "module.py");
+            if (filename && filename.endsWith('.py')) {
+                if (files[filename]) {
+                    showToast('File already exists!', 'error');
+                    return;
+                }
+                files[filename] = `# New Python file: ${filename}\n`;
+                
+                // Add to sidebar list
+                const fileList = document.getElementById('fileList');
+                const newDiv = document.createElement('div');
+                newDiv.id = `file-${filename}`;
+                newDiv.onclick = () => switchFile(filename);
+                newDiv.className = "flex items-center justify-between px-3 py-2 rounded-lg hover:bg-slate-800/80 text-slate-400 hover:text-slate-200 text-sm cursor-pointer transition";
+                newDiv.innerHTML = `<span class="flex items-center gap-2"><i class="fa-brands fa-python text-slate-500"></i> ${filename}</span>`;
+                fileList.appendChild(newDiv);
+                
+                switchFile(filename);
+                showToast(`Created ${filename}`, 'success');
+            } else if (filename) {
+                showToast('Filename must end with .py', 'error');
+            }
+        }
+
+        function handleStdin(e) {
+            if (e.key === 'Enter') {
+                sendStdin();
+            }
+        }
+
+        function sendStdin() {
+            const inputEl = document.getElementById('stdinInput');
+            const val = inputEl.value;
+            if (!val) return;
+            appendTerminalOutput(`> ${val}\n`, "info");
+            inputEl.value = '';
+        }
+
+        function openSettings() {
+            document.getElementById('settingsModal').classList.remove('hidden');
+        }
+
+        function closeSettings() {
+            document.getElementById('settingsModal').classList.add('hidden');
+        }
+
+        function updateFontSize(size) {
+            document.getElementById('codeEditor').style.fontSize = size;
+            document.getElementById('lineNumbers').style.fontSize = size;
+            showToast(`Font size updated to ${size}`, 'success');
+        }
+
+        function toggleTheme() {
+            showToast('Dark theme is currently active.', 'info');
+        }
+
+        function showToast(msg, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toastMsg');
+            const toastIcon = document.getElementById('toastIcon');
+            
+            toastMsg.innerText = msg;
+            if(type === 'error') {
+                toastIcon.className = "fa-solid fa-circle-exclamation text-rose-400";
+            } else if(type === 'info') {
+                toastIcon.className = "fa-solid fa-circle-info text-blue-400";
+            } else {
+                toastIcon.className = "fa-solid fa-circle-check text-emerald-400";
+            }
+
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
